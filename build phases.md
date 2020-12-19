@@ -1,4 +1,35 @@
-       Phases that the engine will be in
+## Next Action (Ingoring build for now)
+
+| Bottom lock | Top lock | Main Piston State<br />(Retracted,Extended,Inbetween)|Next Action|
+|---|---|---|---|
+|Locked|Locked|Extended|Release Bottom|
+|Locked|Locked|Inbetween|INVALID|
+|Locked|Locked|Retracted|Release Top|
+|Locked|Unlocked|Extended|Lock Top|
+|Locked|Unlocked|Inbetween|Extend Main|
+|Locked|Unlocked|Retracted|Extend Main|
+|Unlocked|Locked|Extended|Retract Main|
+|Unlocked|Locked|Inbetween|Retract Main|
+|Unlocked|Locked|Retracted|Lock Bottom|
+|Unlocked|Unlocked|Extended|INVALID|
+|Unlocked|Unlocked|Inbetween|INVALID|
+|Unlocked|Unlocked|Retracted|INVALID|
+
+### Actions
+
+ - Lock Bottom
+ - Lock Top
+ - Release Top
+ - Release Bottom
+ - Extend Main
+ - Retract Main
+
+
+# Original Notes
+
+       
+       
+Phases that the engine will be in
 
     1 At the bottom (start)
     ----------------------------------------------------------------------------------------

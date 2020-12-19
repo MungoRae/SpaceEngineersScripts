@@ -1,50 +1,24 @@
-enum States {
-
-    Building,
-        // phase: extend platform
-    Moving,
-        // phase: secure top
-        // phase: release bottom
-        // phase: contract platforms
-}
-
-
 // A Phase is getting the state of the elevator from an unknown state to a known state.
-enum Phase {
+enum Action {
     SecureBottom,
     SecureTop,
     ReleaseTop,
     ReleaseBottom,
     ExtendPlatforms,
-    ContractPlatforms,
+    RetractPlatforms,
 }
 
-interface Action {
-    public List<Phase> Phases();
-
-    public Phase CurrentPhase();
+enum MainPistonState {
+    Retracted,
+    Extended,
+    Inbetween
 }
 
-class MoveUp : Action {
-    private Phase currentPhase = null;
-    public List<Phase> Phases() {
-        return new List<Phase>() {
-            Phase.SecureBottom,
-            Phase.ReleaseTop,
-            Phase.ExtendPlatforms,
-            Phase.SecureTop,
-            Phase.ReleaseBottom,
-            Phase.ContractPlatforms,
-            Phase.SecureBottom
-        };
-    }
-
-    public Phase currentPhase() {
-        return currentPhase;
-    }
+class ElevatorState {
+    bool bottomLock;
+    bool topLock;
+    MainPistonState mainPistonState;
 }
-
-State currentState = null;
 
 public Program()
 {
@@ -101,112 +75,59 @@ public void Main(string argument, UpdateType updateSource)
     PrintPistonStatus(lowerPistions, display01);
     PrintPistonStatus(elevationPistions, display11);
 
-    var phases = currentAction.Phases();
-
-    // if (AreConnectorsSecure(upperConnectors) && AreConnectorsSecure(lowerConnectors) && O() && ) {
-    //     if (AreAllProjectorBlocksBuilt()) {
-    //         // transition to move phase
-    //     } else {
-    //         // still building
-    //     }
-    // }
-    // if (AreConnectorsSecure(lowerConnectors) && !AreConnectorsSecure(upperConnectors)) {
-    //     if (AreAllProjectorBlocksBuilt()) {
-    //         // transition to move phase
-    //     } else {
-    //         // you are in the build phase
-    //     }
-    // }
-
-    // if (!AreConnectorsSecure(lowerConnectors) && AreConnectorsSecure(upperConnectors)) {
-    //     // should be moving
-    //     // else throw wobbly
-    //     if (AreAllProjectorBlocksBuilt()) {
-    //         // should be moving
-    //     } else {
-    //         // error condition
-    //     }
-    // }
-
-    if (!MainPistonFullyExtended()) {
-        if (!AreConnectorsSecure(lowerConnectors)) {
-            SecureBottom();
-            // extend lower pistons
-            // secure connections
-            // if (IsMainPistionExtended()) {
-            //     // extend upper platform pistons
-            //     // secure connections
-            // } else {
-            //     // extend main pistons
-            //     // extend upper platform pistons
-            //     // secure connections
-            // }
-            return;
-        }
-        else if ()
-        }
-    }
-    
+    ElevatorState state = GetCurrentState();
+    CalculateAction(state);
 }
 
-private void SecureBottom() {
-    if (!PistonAtMaxExtension()) {
-        ExtendLowerPistons();
-        return;
-    } 
-    else if(LandingGearLocked()) {
-        UnlockLandingGear();
-        return;
-    }
-    else {
-        LockBottomConnectors();
-        return;
+private Elevator GetCurrentState() {
+    return new ElevatorState(
+        AreConnectorsSecure(UpperConnectors()),
+        AreConnectorsSecure(LowerConnectors()),
+        GetMainPistonState()
+    );
+}
+
+/*
+ * What should the elevator do given the current state of the machine?
+ *
+ * 
+ */
+private void CalculateAction(ElevatorState state) {
+    if (IsInvalidState(state)) {
+        throw new IllegalStateException("Elevator state is not correct. Please investigate at once!");
     }
 }
 
-private void ExtendLowerPistons() {
-    IMyBlockGroup lowerPistions = LowerConnectorPistons();
-    List<IMyTerminalBlock> blockList = new List<IMyTerminalBlock>();
-    pistonBlockGroup.GetBlocks(blockList);
-}
-
-private bool IsReadyToBuild() {
-    return AreConnectorsSecure(lowerConnectors) && !AreConnectorsSecure(UpperConnectors) && !AreAllProjectorBlocksBuilt() && !IsMainPistionExtended();
-}
-
-private bool IsReadyToMove() {
-    return AreConnectorsSecure(lowerConnectors) && AreConnectorsSecure(UpperConnectors) && AreAllProjectorBlocksBuilt() && IsMainPistionExtended(); 
-}
-
-private void PrintPistonStatus(IMyBlockGroup pistonBlockGroup, IMyTextPanel display) {
-    List<IMyTerminalBlock> blockList = new List<IMyTerminalBlock>();
-    pistonBlockGroup.GetBlocks(blockList);
-    foreach (IMyTerminalBlock block in blockList) {
-        var piston = (IMyPistonBase) block;
-        display.WritePublicText(piston.DisplayNameText + "\n", true);
-        display.WritePublicText(piston.Status + " - " + piston.CurrentPosition + "\n", true);
-        display.WritePublicText("\n", true);
+private bool IsInvalidState(ElevatorState state) {
+    if (state.bottomLock == true && state.topLock == true && state.mainPistonState == MainPistonState.Inbetween) 
+    {
+        return true;
     }
-}
-
-private void PrintConnectorStatus(IMyBlockGroup connectorBlockGroup, IMyTextPanel display) {
-    List<IMyTerminalBlock> blockList = new List<IMyTerminalBlock>();
-    connectorBlockGroup.GetBlocks(blockList);
-    foreach (IMyTerminalBlock block in blockList) {
-        var connector = (IMyShipConnector) block;
-        display.WritePublicText(connector.DisplayNameText + "\n", true);
-        display.WritePublicText(connector.Status + "\n", true);
-        display.WritePublicText("\n", true);
+    else if(state.bottomLock == false && state.topLock == false)
+    {
+        return true;
     }
+
+    return false;
 }
 
-private bool AreConnectorsSecure(IMyBlockGroup connectorBlockGroup, MyShipConnectorStatus status) {
-    List<IMyTerminalBlock> blockList = new List<IMyTerminalBlock>();
+private bool IsNextActionSecureTop(ElevatorState state) {
+    return state.bottomLock == true && state.topLock == false && state.mainPistonState == MainPistonState.Extended;
+}
+
+
+/*
+ * ================================================================================================
+ * EXAMINE BLOCK STATE
+ * ================================================================================================
+ */
+
+
+private bool AreConnectorsSecure(IMyBlockGroup connectorBlockGroup) {
     bool connectorStatus = false;
-    connectorBlockGroup.GetBlocks(blockList);
-    foreach (IMyTerminalBlock block in blockList) {
+    foreach (IMyTerminalBlock block in BlocksFromGroup(connectorBlockGroup)) {
         var connector = (IMyShipConnector) block;
-        if (connector.Status == status) {
+        if (connector.Status == MyShipConnectorStatus.Connected) {
             connectorStatus = true;
         }
         else
@@ -218,12 +139,68 @@ private bool AreConnectorsSecure(IMyBlockGroup connectorBlockGroup, MyShipConnec
     return connectorStatus;
 }
 
+private MainPistonState GetMainPistonState() {
+    var pistonGroup = MainShaftPistons();
+    var state = MainPistonState.Inbetween;
+    /*
+     * Check all blocks are 10.0f or all blocks are 0.0f. 
+     * If not then return Inbetween state.
+     */
+    foreach (IMyTerminalBlock piston in BlocksFromGroup(pistonGroup)) {
+        if (state == null) {
+            if (piston.CurrentPosition == 10.0f) {
+                state = MainPistonState.Extended;
+            }
+            else if (piston.CurrentPosition == 0.0f) {
+                state = MainPistonState.Retracted;
+            }
+            else {
+                return MainPistonState.Inbetween;
+            }
+        }
+        else {
+            if (piston.CurrentPosition != 10.0f && state == MainPistonState.Extended) {
+                return MainPistonState.Inbetween;
+            }
+            else if (piston.CurrentPosition != 0.0f && state == MainPistonState.Retracted) {
+                return MainPistonState.Inbetween; 
+            }
+        }
+    }
+
+    return state;
+}
+
 private bool AreAllProjectorBlocksBuilt() {
     return true;
 }
 
 private bool IsMainPistionExtended() {
     return true;
+}
+
+/*
+ * ================================================================================================
+ * PRINT TO DISPLAY
+ * ================================================================================================
+ */
+
+private void PrintPistonStatus(IMyBlockGroup pistonBlockGroup, IMyTextPanel display) {
+    foreach (IMyTerminalBlock block in BlocksFromGroup(pistonBlockGroup)) {
+        var piston = (IMyPistonBase) block;
+        display.WritePublicText(piston.DisplayNameText + "\n", true);
+        display.WritePublicText(piston.Status + " - " + piston.CurrentPosition + "\n", true);
+        display.WritePublicText("\n", true);
+    }
+}
+
+private void PrintConnectorStatus(IMyBlockGroup connectorBlockGroup, IMyTextPanel display) {
+    foreach (IMyTerminalBlock block in BlocksFromGroup(connectorBlockGroup)) {
+        var connector = (IMyShipConnector) block;
+        display.WritePublicText(connector.DisplayNameText + "\n", true);
+        display.WritePublicText(connector.Status + "\n", true);
+        display.WritePublicText("\n", true);
+    }
 }
 
 private void WriteBlocksInSystem(IMyTextPanel display) {
@@ -236,6 +213,16 @@ private void WriteBlocksInSystem(IMyTextPanel display) {
         display.WritePublicText("\n" + space_tether_block_groups[i].ToString(), true);
     }
 }
+
+private void ClearDisplay(IMyTextPanel display) {
+    display.WritePublicText("");
+}
+
+/*
+ * ================================================================================================
+ * GET BLOCKS
+ * ================================================================================================
+ */
 
 private IMyTextPanel GetDisplayAtPosition(int x, int y) {
     return GridTerminalSystem.GetBlockWithName("SL1 TP - " + x + " " + y) as IMyTextPanel;
@@ -261,6 +248,14 @@ private IMyBlockGroup MainShaftPistons() {
     return GridTerminalSystem.GetBlockGroupWithName("SL1 Main Pistons");
 }
 
-private void ClearDisplay(IMyTextPanel display) {
-    display.WritePublicText("");
+/*
+ * ================================================================================================
+ * UTILITY
+ * ================================================================================================
+ */
+
+private List<IMyTerminalBlock> BlocksFromGroup(IMyBlockGroup group) {
+    List<IMyTerminalBlock> blockList = new List<IMyTerminalBlock>();
+    group.GetBlocks(blockList);
+    return blockList;
 }
